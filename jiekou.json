@@ -1,0 +1,245 @@
+{
+  "experimental": {
+    "clash_api": {
+      "external_controller": "",
+      "secret": ""
+    },
+    "debug": {
+      "max_threads": null,
+      "panic_on_fault": false
+    },
+    "cache_file": {
+      "enabled": false,
+      "path": "",
+      "store_fakeip": true
+    }
+  },
+  "log": {
+    "disabled": false,
+    "level": "info",
+    "output": "",
+    "timestamp": true
+  },
+  "ntp": {
+    "enabled": false,
+    "server": "time.windows.com",
+    "server_port": 123,
+    "interval": "12h",
+    "detour": "direct_out"
+  },
+  "dns": {
+    "final": "dns_final_out",
+    "strategy": "ipv4_only",
+    "independent_cache": true,
+    "rules": [
+      {
+        "domain": [
+          "nitin.ns.cloudflare.com"
+        ],
+        "server": "dns_direct_out"
+      },
+      {
+        "rule_set": [
+          "geosite:cn"
+        ],
+        "server": "dns_direct_out"
+      }
+    ],
+    "servers": [
+      {
+        "tag": "dns_direct_out",
+        "address": "local"
+      },
+      {
+        "tag": "dns_final_out",
+        "address": "https://1.1.1.1/dns-query",
+        "address_resolver": "dns_resolver_out",
+        "detour": "direct_out"
+      },
+      {
+        "tag": "dns_resolver_out",
+        "address": "tls://1.1.1.1",
+        "detour": "direct_out"
+      },
+      {
+        "tag": "dns_block_out",
+        "address": "rcode://success"
+      }
+    ]
+  },
+  "inbounds": [
+    {
+      "type": "mixed",
+      "tag": "mixed_in_direct",
+      "set_system_proxy": false,
+      "listen": "127.0.0.1",
+      "listen_port": 3065,
+      "sniff": true
+    },
+    {
+      "type": "mixed",
+      "tag": "mixed_in_proxy",
+      "set_system_proxy": false,
+      "listen": "127.0.0.1",
+      "listen_port": 3066,
+      "sniff": true
+    },
+    {
+      "type": "mixed",
+      "tag": "mixed_in_rule",
+      "set_system_proxy": false,
+      "listen": "127.0.0.1",
+      "listen_port": 3067,
+      "sniff": true
+    },
+    {
+      "type": "tun",
+      "tag": "tun_in",
+      "interface_name": "Karing TUN Network Adapter",
+      "inet4_address": [
+        "10.20.0.1/30"
+      ],
+      "inet6_address": null,
+      "mtu": 9000,
+      "auto_route": true,
+      "strict_route": false,
+      "stack": "mixed",
+      "platform": {
+        "http_proxy": {
+          "enabled": true,
+          "server": "127.0.0.1",
+          "server_port": 3067
+        }
+      },
+      "include_package": null,
+      "exclude_package": null,
+      "udp_timeout": "15s",
+      "sniff": true
+    }
+  ],
+  "outbounds": [
+    {
+      "server": "nitin.ns.cloudflare.com",
+      "server_port": 2087,
+      "tag": "1-vless-worker-nitin.ns.cloudflare.com",
+      "type": "vless",
+      "uuid": "c2352df8-cbb3-4292-b0d4-d049e995fb48",
+      "packet_encoding": "xudp",
+      "tls": {
+        "enabled": true,
+        "server_name": "aa.wckn.pp.Ua",
+        "insecure": true,
+        "alpn": [
+          "http/1.1"
+        ],
+        "utls": {
+          "enabled": true,
+          "fingerprint": "edge"
+        }
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/vless-ws/",
+        "headers": {
+          "Host": [
+            "aa.wckn.pp.Ua"
+          ]
+        },
+        "max_early_data": 2048,
+        "early_data_header_name": "Sec-WebSocket-Protocol"
+      }
+    },
+    {
+      "type": "urltest",
+      "tag": "urltest_out",
+      "url": "https://www.gstatic.com/generate_204",
+      "interval": "8h",
+      "interrupt_exist_connections": false,
+      "idle_timeout": "8h",
+      "outbounds": [
+        "1-vless-worker-nitin.ns.cloudflare.com"
+      ]
+    },
+    {
+      "type": "direct",
+      "tag": "direct_out"
+    },
+    {
+      "type": "block",
+      "tag": "block_out"
+    },
+    {
+      "type": "dns",
+      "tag": "dns_out"
+    }
+  ],
+  "route": {
+    "final": "urltest_out",
+    "find_process": true,
+    "auto_detect_interface": true,
+    "rules": [
+      {
+        "inbound": [
+          "mixed_in_direct"
+        ],
+        "outbound": "direct_out"
+      },
+      {
+        "inbound": [
+          "mixed_in_proxy"
+        ],
+        "outbound": "urltest_out"
+      },
+      {
+        "protocol": "dns",
+        "outbound": "dns_out"
+      },
+      {
+        "domain_suffix": [
+          "ingest.sentry.io",
+          "karing.app",
+          "yacd.haishan.me"
+        ],
+        "outbound": "direct_out"
+      },
+      {
+        "domain_suffix": [
+          "speed.cloudflare.com"
+        ],
+        "outbound": "urltest_out"
+      },
+      {
+        "rule_set": [
+          "geosite:cn"
+        ],
+        "outbound": "direct_out"
+      },
+      {
+        "rule_set": [
+          "geoip:cn"
+        ],
+        "outbound": "direct_out"
+      },
+      {
+        "ip_is_private": true,
+        "outbound": "direct_out"
+      }
+    ],
+    "rule_set": [
+      {
+        "tag": "geosite:cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://github.com/KaringX/karing-ruleset/raw/sing/geo/geosite/cn.srs",
+        "download_detour": "urltest_out"
+      },
+      {
+        "tag": "geoip:cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://github.com/KaringX/karing-ruleset/raw/sing/geo/geoip/cn.srs",
+        "download_detour": "urltest_out"
+      }
+    ]
+  }
+}
